@@ -11,15 +11,14 @@ const {
 const auth = require('../middleware/auth');
 
 const router = express.Router();
-router.use(auth);
+router.use(auth());
 
-// Routes protégées (JWT obligatoire)
-router.post('/', createAppointment); // User
-router.put('/:id/validate', validateAppointment); // Admin
-router.put('/:id/confirm', confirmAppointment); // Mechanic
-router.put('/:id/complete', completeAppointment); // Mechanic
-router.delete('/:id', deleteAppointment); // User (si `scheduled`) ou Admin
-router.get('/', getAppointments); // Admin
-router.get('/:id', getAppointmentById); // User (propres RDV) ou Mechanic (assignés)
+router.post('/', createAppointment); 
+router.put('/:id/validate', validateAppointment); 
+router.put('/:id/confirm', confirmAppointment); 
+router.put('/:id/complete', completeAppointment); 
+router.delete('/:id', deleteAppointment); 
+router.get('/', getAppointments); 
+router.get('/:id', getAppointmentById); 
 
 module.exports = router;

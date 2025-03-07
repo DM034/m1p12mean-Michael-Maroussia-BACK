@@ -15,7 +15,7 @@ function authMiddleware(options = {}) {
       return res.status(401).json({ message: "Token d'authentification manquant" });
     }
     const token = authHeader.split(' ')[1];
-
+    console.log('here')
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;

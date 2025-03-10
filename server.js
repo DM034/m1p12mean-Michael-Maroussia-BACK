@@ -8,6 +8,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const bodyParser = require('body-parser');
 const appointmentRoutes = require('./routes/appointmentsRoutes');
 const serviceRoutes = require("./routes/serviceRoutes");
+const quoteRoutes = require("./routes/quoteRoutes");
 
 dotenv.config();
 connectDB();
@@ -26,6 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/quotes", quoteRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

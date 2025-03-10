@@ -42,7 +42,7 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Identifiants invalides" });
     }
 
-    const payload = { id: user._id, email: user.email };
+    const payload = { id: user._id, email: user.email, role: user.role };
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "12h",
     });

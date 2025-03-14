@@ -7,10 +7,11 @@ const createQuote = async (req, res) => {
     }
 
     try {
-        const { services } = req.body;
+        const { vehicleId, services } = req.body;
 
-        if (!services || services.length === 0) {
-            return res.status(400).json({ message: "Aucun service sélectionné." });
+        const vehicle = await Vehicle.findById(vehicleId);
+        if (!vehicle || vehicle.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Ce véhicule ne vous appartient pas." });
         }
 
         let totalPrice = 0;
@@ -26,6 +27,7 @@ const createQuote = async (req, res) => {
 
         const newQuote = new Quote({
             user: req.user.id,
+            vehicle: vehicle._id, // Associe le véhicule au devis
             services: serviceDetails,
             totalPrice,
             status: "pending"

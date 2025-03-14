@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 const quoteSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Client qui fait le devis
+    vehicle: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", required: true }, // Véhicule concerné
     services: [
         {
             service: { type: mongoose.Schema.Types.ObjectId, ref: "Service", required: true },

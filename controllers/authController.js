@@ -22,7 +22,13 @@ const registerUser = async (req, res) => {
       expiresIn: "1h",
     });
 
-    res.status(201).json({ token });
+    res.status(201).json({ 
+      id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      token: token,
+     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

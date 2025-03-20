@@ -1,4 +1,6 @@
 const Appointment = require("../models/Appointment");
+const Vehicle = require("../models/Vehicle");
+const Service = require("../models/Service");
 
 const createAppointment = async (req, res) => {
   if (req.user.role !== "user") {
@@ -11,12 +13,19 @@ const createAppointment = async (req, res) => {
   }
 
   try {
-    const { carModel, licensePlate, serviceType, appointmentDate } = req.body;
+    const { vehicleId, serviceId, appointmentDate } = req.body;
+    const service = await Service.findById(serviceId);
+    const vehicle = await Vehicle.findById(vehicleId);
+    if (!vehicle) {
+      return res.status(404).json({ message: "Véhicule non trouvé" });
+    }
     const newAppointment = new Appointment({
       customerName: req.user.name,
-      carModel,
-      licensePlate,
-      serviceType,
+      vehicleId,
+      serviceId,
+      serviceType: service.name, 
+      carModel: vehicle.model, 
+      licensePlate: vehicle.licensePlate,
       appointmentDate,
       status: "pending",
     });

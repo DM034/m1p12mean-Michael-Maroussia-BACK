@@ -1,5 +1,6 @@
 const Quote = require("../models/Quote");
 const Service = require("../models/Service");
+const Vehicle = require("../models/Vehicle");
 
 const createQuote = async (req, res) => {
     if (!req.user || req.user.role !== "user") {

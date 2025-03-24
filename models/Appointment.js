@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const appointmentSchema = new mongoose.Schema({
+    user: { type: String, required: true },
     customerName: { type: String, required: false }, 
-    vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", required: true }, 
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service", required: true }, 
+    vehicleId: { type: String, required: true }, 
+    serviceId: { type: String, required: true }, 
     serviceType: { type: String, required: true }, 
     carModel: { type: String, required: true }, 
     licensePlate: { type: String, required: true }, 

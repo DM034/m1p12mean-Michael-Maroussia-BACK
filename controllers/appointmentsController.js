@@ -20,6 +20,7 @@ const createAppointment = async (req, res) => {
       return res.status(404).json({ message: "Véhicule non trouvé" });
     }
     const newAppointment = new Appointment({
+      user: req.user.id,
       customerName: req.user.name,
       vehicleId,
       serviceId,

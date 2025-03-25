@@ -1,6 +1,7 @@
 const express = require('express');
 const {
     createAppointment,
+    assignMechanics,
     validateAppointment,
     confirmAppointment,
     completeAppointment,
@@ -14,6 +15,7 @@ const router = express.Router();
 router.use(auth());
 
 router.post('/', createAppointment); 
+router.put('/:id/assign-mechanics', assignMechanics); 
 router.put('/:id/validate', validateAppointment); 
 router.put('/:id/confirm', confirmAppointment); 
 router.put('/:id/complete', completeAppointment); 

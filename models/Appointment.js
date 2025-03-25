@@ -14,6 +14,7 @@ const appointmentSchema = new mongoose.Schema({
         enum: ['pending', 'scheduled', 'in-progress', 'completed', 'canceled'], 
         default: 'pending' 
     },
+    assignedMechanics: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Appointment', appointmentSchema);

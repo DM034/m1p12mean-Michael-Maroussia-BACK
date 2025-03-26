@@ -1,8 +1,10 @@
 const express = require('express');
 const {
     createAppointment,
+    assignMechanicsToAppointment,
     validateAppointment,
     confirmAppointment,
+    addPartsToAppointment,
     completeAppointment,
     deleteAppointment,
     getAppointments,
@@ -14,8 +16,10 @@ const router = express.Router();
 router.use(auth());
 
 router.post('/', createAppointment); 
+router.put('/:id/assign-mechanics', authMiddleware({ roles: ['admin'] }), assignMechanicsToAppointment);
 router.put('/:id/validate', validateAppointment); 
 router.put('/:id/confirm', confirmAppointment); 
+router.put('/appointments/:appointmentId/add-parts', authMiddleware({ roles: ['mechanic', 'admin'] }), addPartsToAppointment);
 router.put('/:id/complete', completeAppointment); 
 router.delete('/:id', deleteAppointment); 
 router.get('/', getAppointments); 

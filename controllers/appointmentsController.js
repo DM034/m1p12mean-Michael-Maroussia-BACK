@@ -84,6 +84,25 @@ const assignMechanicsToAppointment = async (req, res) => {
   }
 };
 
+const assignMechanics = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mechanics } = req.body;
+
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Rendez-vous non trouvé." });
+    }
+
+    appointment.assignedMechanics = mechanics;
+    await appointment.save();
+
+    res.status(200).json({ message: "Mécaniciens assignés.", appointment });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const validateAppointment = async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ message: "Seul un admin peut valider un rendez-vous." });

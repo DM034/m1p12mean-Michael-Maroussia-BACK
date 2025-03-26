@@ -1,20 +1,73 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const appointmentSchema = new mongoose.Schema({
-    user: { type: String, required: true },
-    customerName: { type: String, required: false }, 
-    vehicleId: { type: String, required: true }, 
-    serviceId: { type: String, required: true }, 
-    serviceType: { type: String, required: true }, 
-    carModel: { type: String, required: true }, 
-    licensePlate: { type: String, required: true }, 
-    appointmentDate: { type: Date, required: true }, 
-    status: { 
-        type: String, 
-        enum: ['pending', 'scheduled', 'in-progress', 'completed', 'canceled'], 
-        default: 'pending' 
+const AppointmentSchema = new Schema({
+  clientId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+  vehicleId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Vehicle',
+    required: true
+  },
+  mechanics: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  }],
+  startTime: {
+    type: Date,
+    required: true,
+    index: true
+  },
+  endTime: {
+    type: Date,
+    index: true
+  },
+  status: {
+    type: String,
+    enum: ['scheduled', 'validated', 'in_progress', 'completed', 'canceled'],
+    default: 'scheduled',
+    index: true
+  },
+  services: [{
+    serviceType: {
+      type: Schema.Types.ObjectId,
+      ref: 'ServiceType',
+      required: true
     },
-    assignedMechanics: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
-}, { timestamps: true });
+    estimatedDuration: Number,
+    estimatedCost: Number
+  }],
+  totalEstimatedCost: Number,
 
-module.exports = mongoose.model('Appointment', appointmentSchema);
+  partsUsed: [{
+    part: {
+      type: Schema.Types.ObjectId,
+      ref: 'Part',
+      required: true
+    },
+    quantity: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    unitPrice: {
+      type: Number,
+      min: 0
+    },
+    totalPrice: {
+      type: Number,
+      min: 0
+    }
+  }],
+
+  notes: String
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.model('Appointment', AppointmentSchema);

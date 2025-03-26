@@ -6,7 +6,7 @@ const addVehicle = async (req, res) => {
     }
 
     try {
-        const { brand, model, year, licensePlate } = req.body;
+        const { make, model, year, licensePlate, technicalDetails } = req.body;
 
         const existingVehicle = await Vehicle.findOne({ licensePlate });
         if (existingVehicle) {
@@ -14,11 +14,12 @@ const addVehicle = async (req, res) => {
         }
 
         const newVehicle = new Vehicle({
-            user: req.user.id,
-            brand,
+            userId: req.user.id,
+            make,
             model,
             year,
-            licensePlate
+            licensePlate,
+            technicalDetails
         });
 
         await newVehicle.save();
@@ -34,7 +35,7 @@ const getUserVehicles = async (req, res) => {
     }
 
     try {
-        const vehicles = await Vehicle.find({ user: req.user.id });
+        const vehicles = await Vehicle.find({ userId: req.user.id }); // ✅ Correction
         res.status(200).json(vehicles);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -46,7 +47,7 @@ const deleteVehicle = async (req, res) => {
         const vehicle = await Vehicle.findById(req.params.id);
         if (!vehicle) return res.status(404).json({ message: "Véhicule introuvable." });
 
-        if (vehicle.user.toString() !== req.user.id) {
+        if (vehicle.userId.toString() !== req.user.id) {
             return res.status(403).json({ message: "Vous ne pouvez supprimer que vos propres véhicules." });
         }
 

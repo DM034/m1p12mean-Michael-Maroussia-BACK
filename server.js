@@ -22,7 +22,15 @@ const app = express();
 // Middleware
 app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+
+app.use(cors({
+  origin: [
+    'https://m1p12mean-michael-maroussia-garage.vercel.app/', 
+    'http://localhost:4200'            
+  ],
+  credentials: true
+}));
+
 app.use(morgan('dev'));
 // app.use(bodyParser.json());
 

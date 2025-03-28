@@ -17,10 +17,11 @@ const router = express.Router();
 router.use(authMiddleware());
 
 router.post('/', createAppointment); 
-router.put('/:id/assign-mechanics', auth({ roles: ['admin'] }), assignMechanicsToAppointment);
+router.put('/:id/assign-mechanics', authMiddleware({ roles: ['admin'] }), assignMechanicsToAppointment);
+router.put('/:id/assign-mechanics', assignMechanics); 
 router.put('/:id/validate', validateAppointment); 
 router.put('/:id/confirm', confirmAppointment); 
-router.put('/appointments/:appointmentId/add-parts', auth({ roles: ['mechanic', 'admin'] }), addPartsToAppointment);
+router.put('/appointments/:appointmentId/add-parts', authMiddleware({ roles: ['mechanic', 'admin'] }), addPartsToAppointment);
 router.put('/:id/complete', completeAppointment); 
 router.delete('/:id', deleteAppointment); 
 router.get('/', getAppointments); 

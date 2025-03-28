@@ -1,4 +1,4 @@
-const ServiceType = require("../models/ServiceType");
+const ServiceType = require("../models/Service");
 
 const createService = async (req, res) => {
   if (req.user.role !== 'admin') {

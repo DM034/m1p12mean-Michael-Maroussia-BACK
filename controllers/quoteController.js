@@ -1,5 +1,5 @@
 const Quote = require("../models/Quote");
-const Service = require("../models/Service");
+const Service = require("../models/ServiceType");
 const Vehicle = require("../models/Vehicle");
 
 const createQuote = async (req, res) => {

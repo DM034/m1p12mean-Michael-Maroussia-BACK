@@ -59,6 +59,9 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Identifiants invalides" });
     }
 
+    user.lastLogin = new Date();
+    await user.save();
+
     const payload = {
       id: user._id,
       email: user.email,

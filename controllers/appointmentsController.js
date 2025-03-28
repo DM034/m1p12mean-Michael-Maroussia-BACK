@@ -1,6 +1,6 @@
 const Appointment = require("../models/Appointment");
 const Vehicle = require("../models/Vehicle");
-const ServiceType = require("../models/Service");
+const ServiceType = require("../models/ServiceType");
 const Part = require("../models/Part");
 
 const createAppointment = async (req, res) => {
@@ -283,5 +283,7 @@ module.exports = {
   completeAppointment,
   deleteAppointment,
   getAppointments,
-  getAppointmentById
+  getAppointmentById,
+  assignMechanics,
+  addPartsToAppointment
 };

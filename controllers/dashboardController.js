@@ -1,4 +1,4 @@
-const Service = require("../models/Service");
+const Service = require("../models/ServiceType");
 const Appointment = require("../models/Appointment");
 const User = require("../models/User");
 const Vehicle = require("../models/Vehicle");

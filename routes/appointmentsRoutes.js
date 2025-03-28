@@ -8,12 +8,13 @@ const {
     completeAppointment,
     deleteAppointment,
     getAppointments,
-    getAppointmentById
+    getAppointmentById,
+    assignMechanics
 } = require('../controllers/appointmentsController');
-const auth = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
-router.use(auth());
+router.use(authMiddleware());
 
 router.post('/', createAppointment); 
 router.put('/:id/assign-mechanics', authMiddleware({ roles: ['admin'] }), assignMechanicsToAppointment);

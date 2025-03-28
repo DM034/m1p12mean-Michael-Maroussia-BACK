@@ -25,7 +25,7 @@ app.use(express.json());
 
 app.use(cors({
   origin: [
-    'https://m1p12mean-michael-maroussia-garage.vercel.app/', 
+    'https://m1p12mean-michael-maroussia-garage.vercel.app', 
     'http://localhost:4200'            
   ],
   credentials: true

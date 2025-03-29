@@ -1,11 +1,10 @@
-// controllers/invoiceController.js
 const Appointment = require("../models/Appointment");
-const ServiceType = require("../models/Service");
+const ServiceType = require("../models/ServiceType");
 const Part = require("../models/Part");
 const User = require("../models/User");
-const Invoice = require("../models/Invoice");
+const Vehicle = require("../models/Vehicle");
 
-const createInvoiceFromAppointment = async (req, res) => {
+const getInvoiceByAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
 
@@ -16,28 +15,21 @@ const createInvoiceFromAppointment = async (req, res) => {
       return res.status(404).json({ message: "Rendez-vous introuvable" });
     }
 
-    // Vérifie si une facture existe déjà pour ce rendez-vous
-    const existingInvoice = await Invoice.findOne({ appointmentId });
-    if (existingInvoice) {
-      return res.status(400).json({ message: "Une facture existe déjà pour ce rendez-vous." });
-    }
-
-    const client = await User.findById(appointment.clientId);
-    if (!client) {
-      return res.status(404).json({ message: "Client introuvable" });
+    const user = await User.findById(appointment.clientId);
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
     }
 
     let items = [];
     let subtotal = 0;
 
-    // Services
-    for (const item of appointment.services) {
+    for (let item of appointment.services) {
       const service = await ServiceType.findById(item.serviceType);
       if (service) {
         const total = item.estimatedCost || service.baseCost;
         subtotal += total;
         items.push({
-          type: "service",
+          type: 'service',
           description: service.name,
           quantity: 1,
           unitPrice: total,
@@ -46,14 +38,13 @@ const createInvoiceFromAppointment = async (req, res) => {
       }
     }
 
-    // Pièces
-    for (const partItem of appointment.partsUsed || []) {
+    for (let partItem of appointment.partsUsed || []) {
       const part = await Part.findById(partItem.part);
       if (part) {
         const total = part.price * partItem.quantity;
         subtotal += total;
         items.push({
-          type: "part",
+          type: 'part',
           description: part.name,
           quantity: partItem.quantity,
           unitPrice: part.price,
@@ -62,27 +53,29 @@ const createInvoiceFromAppointment = async (req, res) => {
       }
     }
 
-    const taxRate = 0.2;
+    const taxRate = 0.2; // 20% TVA
     const totalAmount = subtotal * (1 + taxRate);
 
-    const newInvoice = new Invoice({
-      appointmentId,
-      clientId: appointment.clientId,
+    const invoice = {
       invoiceNumber: `INV-${appointment._id}`,
+      client: `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`,
+      email: user.email,
+      vehicle: {
+        model: appointment.vehicleId?.model,
+        licensePlate: appointment.vehicleId?.licensePlate
+      },
+      appointmentDate: appointment.startTime,
       items,
       subtotal,
       taxRate,
       totalAmount,
-      status: "issued"
-    });
+      status: 'issued'
+    };
 
-    await newInvoice.save();
-    res.status(201).json(newInvoice);
+    res.status(200).json(invoice);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  createInvoiceFromAppointment
-};
+module.exports = { getInvoiceByAppointment };

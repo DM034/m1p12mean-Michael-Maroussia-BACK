@@ -2,57 +2,53 @@ const Appointment = require("../models/Appointment");
 const Vehicle = require("../models/Vehicle");
 const ServiceType = require("../models/ServiceType");
 const Part = require("../models/Part");
-const User = require("../models/User");
-const Invoice = require("../models/Invoice");
 
 const createAppointment = async (req, res) => {
   if (req.user.role !== "user") {
-    return res.status(403).json({
-      message: "Accès refusé. Seuls les utilisateurs peuvent créer un rendez-vous.",
-    });
+    return res.status(403).json({ message: "Seuls les clients peuvent créer un rendez-vous." });
   }
 
   try {
-    const { vehicleId, services, startTime } = req.body;
+    const { vehicleId, services, startTime, notes } = req.body;
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
-      return res.status(404).json({ message: "Véhicule non trouvé" });
+      return res.status(404).json({ message: "Véhicule non trouvé." });
     }
 
     let totalEstimatedCost = 0;
-    const enrichedServices = [];
+    const populatedServices = [];
 
-    for (const item of services) {
-      const serviceType = await ServiceType.findById(item.serviceType);
-      if (!serviceType) {
-        return res.status(404).json({ message: `Service introuvable : ${item.serviceType}` });
+    for (const s of services) {
+      const service = await ServiceType.findById(s.serviceType);
+      if (!service) {
+        return res.status(404).json({ message: `Service introuvable pour ID ${s.serviceType}` });
       }
 
-      const estimatedDuration = serviceType.defaultDuration || 1;
-      const estimatedCost = serviceType.baseCost || 0;
+      const duration = s.estimatedDuration || service.defaultDuration || 1; // fallback
+      const cost = s.estimatedCost || service.basePrice || 0;
 
-      totalEstimatedCost += estimatedCost;
-
-      enrichedServices.push({
-        serviceType: serviceType._id,
-        estimatedDuration,
-        estimatedCost
+      populatedServices.push({
+        serviceType: service._id,
+        estimatedDuration: duration,
+        estimatedCost: cost
       });
+
+      totalEstimatedCost += cost;
     }
 
     const appointment = new Appointment({
       clientId: req.user.id,
       vehicleId,
-      services: enrichedServices,
-      totalEstimatedCost,
       startTime,
-      status: "scheduled"
+      status: "scheduled",
+      services: populatedServices,
+      totalEstimatedCost,
+      notes
     });
 
     await appointment.save();
-    res.status(201).json({ message: "Rendez-vous créé", appointment });
-
+    res.status(201).json({ message: "Rendez-vous créé.", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -113,34 +109,21 @@ const validateAppointment = async (req, res) => {
   }
 
   try {
-    const { mechanics } = req.body; // Les mécaniciens assignés sont envoyés dans le body de la requête
     const appointment = await Appointment.findById(req.params.id);
-
-    if (!appointment) {
-      return res.status(404).json({ message: "Rendez-vous non trouvé" });
-    }
+    if (!appointment) return res.status(404).json({ message: "Rendez-vous non trouvé" });
 
     if (appointment.status !== "scheduled") {
       return res.status(400).json({ message: "Le rendez-vous n'est pas dans un état validable." });
     }
 
-    if (!mechanics || mechanics.length === 0) {
-      return res.status(400).json({ message: "Aucun mécanicien fourni pour assignation." });
+    if (!appointment.mechanics || appointment.mechanics.length === 0) {
+      return res.status(400).json({ message: "Aucun mécanicien assigné à ce rendez-vous." });
     }
 
-    // Vérifie si les IDs fournis sont bien des mécaniciens existants
-    const validMechanics = await User.find({ _id: { $in: mechanics }, role: 'mechanic' });
-
-    if (validMechanics.length === 0) {
-      return res.status(400).json({ message: "Aucun mécanicien valide trouvé pour assignation." });
-    }
-
-    // Assigne les mécaniciens au rendez-vous
-    appointment.mechanics = validMechanics.map(mech => mech._id);
     appointment.status = "validated";
     await appointment.save();
 
-    res.status(200).json({ message: "Rendez-vous validé avec mécaniciens assignés.", appointment });
+    res.status(200).json({ message: "Rendez-vous validé.", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -221,104 +204,18 @@ const completeAppointment = async (req, res) => {
   }
 
   try {
-    const { startTime, endTime, partsUsed } = req.body;
-
-    const appointment = await Appointment.findById(req.params.id)
-      .populate("clientId")
-      .populate("services.serviceType")
-      .populate("partsUsed.part");
-
+    const appointment = await Appointment.findById(req.params.id);
     if (!appointment) return res.status(404).json({ message: "Rendez-vous non trouvé" });
 
     if (appointment.status !== "in_progress") {
       return res.status(400).json({ message: "Le rendez-vous n'est pas en cours." });
     }
 
-    if (!startTime || !endTime) {
-      return res.status(400).json({ message: "Veuillez fournir une date de début et une date de fin." });
-    }
-
-    // ✅ Mise à jour du statut, de la date de fin et de la date de début
     appointment.status = "completed";
-    appointment.startTime = new Date(startTime);
-    appointment.endTime = new Date(endTime);
-
-    // ✅ Ajout des `partsUsed` fournies par le mécanicien
-    if (Array.isArray(partsUsed) && partsUsed.length > 0) {
-      for (const partItem of partsUsed) {
-        const part = await Part.findById(partItem.part);
-
-        if (!part) {
-          return res.status(404).json({ message: `Pièce introuvable pour l'ID ${partItem.part}` });
-        }
-
-        const quantity = partItem.quantity || 1;
-        const unitPrice = part.price;
-        const totalPrice = unitPrice * quantity;
-
-        appointment.partsUsed.push({
-          part: part._id,
-          quantity: quantity,
-          unitPrice: unitPrice,
-          totalPrice: totalPrice
-        });
-      }
-    }
-
+    appointment.endTime = new Date();
     await appointment.save();
 
-    // ✅ Génération de la facture
-    const items = [];
-    let subtotal = 0;
-
-    // Ajouter les services à la facture
-    for (let s of appointment.services) {
-      const cost = s.estimatedCost || s.serviceType?.baseCost || 0;
-      items.push({
-        type: "service",
-        description: s.serviceType.name,
-        quantity: 1,
-        unitPrice: cost,
-        total: cost
-      });
-      subtotal += cost;
-    }
-
-    // Ajouter les pièces utilisées à la facture
-    for (let p of appointment.partsUsed || []) {
-      const total = p.unitPrice * p.quantity;
-      items.push({
-        type: "part",
-        description: p.part.name,
-        quantity: p.quantity,
-        unitPrice: p.unitPrice,
-        total: total
-      });
-      subtotal += total;
-    }
-
-    const taxRate = 0.2;
-    const totalAmount = subtotal * (1 + taxRate);
-
-    const invoice = new Invoice({
-      appointmentId: appointment._id,
-      clientId: appointment.clientId._id,
-      invoiceNumber: `INV-${appointment._id}`,
-      items,
-      subtotal,
-      taxRate,
-      totalAmount,
-      status: 'issued'
-    });
-
-    await invoice.save();
-
-    res.status(200).json({
-      message: "Rendez-vous terminé et facture générée.",
-      appointment,
-      invoice
-    });
-
+    res.status(200).json({ message: "Rendez-vous terminé.", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -383,7 +280,6 @@ module.exports = {
   assignMechanicsToAppointment,
   validateAppointment,
   confirmAppointment,
-  addPartsToAppointment,
   completeAppointment,
   deleteAppointment,
   getAppointments,

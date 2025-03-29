@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/auth");
-const { createInvoiceFromAppointment } = require("../controllers/invoiceController");
+const { getInvoiceByAppointment } = require("../controllers/invoiceController");
 
-router.post("/create/:appointmentId", authMiddleware({ roles: ["admin", "user"] }), createInvoiceFromAppointment);
+router.get("/:appointmentId", authMiddleware({ roles: ["admin", "user"] }), getInvoiceByAppointment);
 
 module.exports = router;

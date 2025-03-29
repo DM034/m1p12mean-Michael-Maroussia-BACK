@@ -20,6 +20,7 @@ const AppointmentSchema = new Schema({
   }],
   startTime: {
     type: Date,
+    required: true,
     index: true
   },
   endTime: {
@@ -35,7 +36,7 @@ const AppointmentSchema = new Schema({
   services: [{
     serviceType: {
       type: Schema.Types.ObjectId,
-      ref: 'Service',
+      ref: 'ServiceType',
       required: true
     },
     estimatedDuration: Number,

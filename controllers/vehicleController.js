@@ -58,4 +58,15 @@ const deleteVehicle = async (req, res) => {
     }
 };
 
-module.exports = { addVehicle, getUserVehicles, deleteVehicle };
+const updateVehicle = async (req, res) =>{
+    try {
+        const vehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!vehicle) return res.status(404).json({ message: "Vehicule non trouvée" });
+
+        res.status(200).json(vehicle);
+      } catch (error) {
+        res.status(500).json({ error: 'Erreur lors de la mise à jour du véhicule.' });
+      }
+}
+
+module.exports = { addVehicle, getUserVehicles, deleteVehicle, updateVehicle };

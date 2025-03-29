@@ -13,6 +13,7 @@ const vehicleRoutes = require("./routes/vehicleRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const partRoutes = require("./routes/partRoutes");
+const userRoutes = require('./routes/userRoutes');
 
 dotenv.config();
 connectDB();

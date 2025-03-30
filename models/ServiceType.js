@@ -13,4 +13,4 @@ const ServiceTypeSchema = new Schema({
   baseCost: Number
 });
 
-module.exports = mongoose.model('Service', ServiceTypeSchema);
+module.exports = mongoose.model('ServiceType', ServiceTypeSchema);

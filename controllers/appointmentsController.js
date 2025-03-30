@@ -42,8 +42,6 @@ const createAppointment = async (req, res) => {
       vehicleId,
       startTime,
       status: "scheduled",
-      services: populatedServices,
-      totalEstimatedCost,
       notes
     });
 

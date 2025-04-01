@@ -86,4 +86,22 @@ const deleteUser = async (req, res) => {
     }
   };
 
-module.exports = { registerMechanic, getUsers,getUserById, updateUser,deleteUser };
+const  getAllMechanics =  async (req, res) =>  {
+    try {
+      const mechanics = await User.find({ role: 'mechanic', isActive: true });
+      res.status(200).json(mechanics);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+const   getAllClients =  async (req, res) =>  {
+    try {
+      const clients = await User.find({ role: 'user', isActive: true });
+      res.status(200).json(clients);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+module.exports = { registerMechanic, getUsers,getUserById, updateUser,deleteUser,getAllMechanics,getAllClients };

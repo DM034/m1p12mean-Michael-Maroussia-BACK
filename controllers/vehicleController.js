@@ -42,6 +42,16 @@ const getUserVehicles = async (req, res) => {
     }
 };
 
+const getVehicles = async (req, res) => {
+
+    try {
+        const vehicles = await Vehicle.find(); 
+        res.status(200).json(vehicles);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 const deleteVehicle = async (req, res) => {
     try {
         const vehicle = await Vehicle.findById(req.params.id);
@@ -69,4 +79,4 @@ const updateVehicle = async (req, res) =>{
       }
 }
 
-module.exports = { addVehicle, getUserVehicles, deleteVehicle, updateVehicle };
+module.exports = { addVehicle, getUserVehicles, deleteVehicle, updateVehicle,getVehicles };

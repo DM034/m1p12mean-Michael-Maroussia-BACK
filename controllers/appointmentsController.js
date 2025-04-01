@@ -10,13 +10,31 @@ const getAppointmentsByUser = async (req, res) => {
       const userId = req.user.id; // L'utilisateur connecté
 
       const appointments = await Appointment.find({ clientId: userId })
-          .populate("vehicleId", "model licensePlate")
-          .populate("services.serviceType", "name baseCost")
-          .populate("mechanics", "profile specialties");
+      .populate({ path: "mechanics", select: "profile specialties _id" });
 
       res.status(200).json(appointments);
   } catch (error) {
       res.status(500).json({ message: error.message });
+  }
+};
+
+const getAppointmentsForMechanic = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    if (!mechanicId) {
+      return res.status(400).json({ message: "L'ID du mécanicien est requis" });
+    }
+    // Récupération des rendez-vous où le mécanicien est assigné
+    const appointments = await Appointment.find({ mechanics: mechanicId })
+      .populate('clientId', 'email profile')       // Adapter les champs à afficher pour le client
+      .populate('vehicleId')                        // Récupération des informations du véhicule
+      .populate('mechanics', 'profile')             // Récupération des infos des mécaniciens
+      .populate('services.serviceType')             // Récupération des infos sur le type de service
+      .populate('partsUsed.part');                  // Récupération des infos sur les pièces utilisées
+
+    res.status(200).json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -394,6 +412,16 @@ const getAppointmentById = async (req, res) => {
   }
 };
 
+const updateAppointment = async (req, res) => {
+  try {
+      const appointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      if (!appointment) return res.status(404).json({ message: "Rendez-vous non trouvée" });
+      res.status(200).json(appointment);
+  } catch (error) {
+          res.status(500).json({ error: error });
+  }
+}
+
 module.exports = {
   getAppointmentsByUser,
   createAppointment,
@@ -405,5 +433,7 @@ module.exports = {
   getAppointments,
   getAppointmentById,
   assignMechanics,
-  addPartsToAppointment
+  addPartsToAppointment,
+  updateAppointment,
+  getAppointmentsForMechanic
 };

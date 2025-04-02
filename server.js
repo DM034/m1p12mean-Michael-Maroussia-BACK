@@ -14,11 +14,16 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const partRoutes = require("./routes/partRoutes");
 const userRoutes = require('./routes/userRoutes');
+const socketIo = require('./utils/socket');
+const notificationRoutes = require('./routes/notificationRoutes');
+const http = require('http');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo.init(server);
 
 // Middleware
 app.use(express.json());
@@ -46,6 +51,7 @@ app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/users", userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -4,6 +4,23 @@ const ServiceType = require("../models/ServiceType");
 const Part = require("../models/Part");
 const User = require("../models/User");
 const Invoice = require("../models/Invoice");
+const Notification = require("../models/Notification");
+const io = require('../utils/socket');
+
+// Variable pour stocker les fonctions socket
+let socketFunctions = {
+  emitNewNotification: () => {},
+  emitNotificationRead: () => {},
+  emitAllNotificationsRead: () => {},
+  emitNotificationDeleted: () => {},
+};
+
+// Méthode pour définir les fonctions socket
+const setSocketFunctions = (functions) => {
+  if (functions) {
+    socketFunctions = functions;
+  }
+};
 
 const getAppointmentsByUser = async (req, res) => {
   try {
@@ -47,6 +64,7 @@ const createAppointment = async (req, res) => {
 
   try {
     const { vehicleId, services, startTime, notes } = req.body;
+    const io = req.app.get('io'); 
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -85,12 +103,31 @@ const createAppointment = async (req, res) => {
     });
 
     await appointment.save();
+
+    const clientNotification = new Notification({
+      userId: req.user.id,
+      message: "Votre rendez-vous a été créé avec succès."
+    });
+    const savedClientNotification = await clientNotification.save();
+    socketFunctions.emitNewNotification(req.user.id, savedClientNotification);
+
+    const admins = await User.find({ role: "admin" });
+    admins.forEach(async (admin) => {
+      const notification = new Notification({
+        userId: admin._id,
+        message: "Nouveau rendez-vous créé par un client."
+      });
+      const savedNotification = await notification.save();
+      socketFunctions.emitNewNotification(admin.id.toString(), savedNotification);
+    });
+
     res.status(201).json({ message: "Rendez-vous créé", appointment });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 const assignMechanicsToAppointment = async (req, res) => {
   if (req.user.role !== "admin") {
@@ -147,34 +184,32 @@ const validateAppointment = async (req, res) => {
   }
 
   try {
-    const { mechanics } = req.body; // Les mécaniciens assignés sont envoyés dans le body de la requête
+    const { mechanics } = req.body; 
     const appointment = await Appointment.findById(req.params.id);
 
     if (!appointment) {
       return res.status(404).json({ message: "Rendez-vous non trouvé" });
     }
 
-    if (appointment.status !== "scheduled") {
-      return res.status(400).json({ message: "Le rendez-vous n'est pas dans un état validable." });
-    }
-
     if (!mechanics || mechanics.length === 0) {
       return res.status(400).json({ message: "Aucun mécanicien fourni pour assignation." });
     }
 
-    // Vérifie si les IDs fournis sont bien des mécaniciens existants
-    const validMechanics = await User.find({ _id: { $in: mechanics }, role: 'mechanic' });
-
-    if (validMechanics.length === 0) {
-      return res.status(400).json({ message: "Aucun mécanicien valide trouvé pour assignation." });
-    }
-
-    // Assigne les mécaniciens au rendez-vous
-    appointment.mechanics = validMechanics.map(mech => mech._id);
+    appointment.mechanics = mechanics;
     appointment.status = "validated";
     await appointment.save();
 
-    res.status(200).json({ message: "Rendez-vous validé avec mécaniciens assignés.", appointment });
+    // 🔔 Notification aux mécaniciens assignés
+    mechanics.forEach(async (mechanicId) => {
+      const notification = new Notification({
+        userId: mechanicId,
+        message: "Vous avez été assigné à un nouveau rendez-vous."
+      });
+      await notification.save();
+      io.getIO().to(mechanicId.toString()).emit('notification', notification);
+    });
+
+    res.status(200).json({ message: "Rendez-vous validé", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -189,18 +224,18 @@ const confirmAppointment = async (req, res) => {
     const appointment = await Appointment.findById(req.params.id);
     if (!appointment) return res.status(404).json({ message: "Rendez-vous non trouvé" });
 
-    if (appointment.status !== "validated") {
-      return res.status(400).json({ message: "Le rendez-vous n'est pas encore validé par l'admin." });
-    }
-
-    if (!appointment.mechanics.includes(req.user.id)) {
-      return res.status(403).json({ message: "Vous n'êtes pas assigné à ce rendez-vous." });
-    }
-
     appointment.status = "in_progress";
     await appointment.save();
 
-    res.status(200).json({ message: "Rendez-vous confirmé par le mécanicien.", appointment });
+    // 🔔 Notification au client
+    const notification = new Notification({
+      userId: appointment.clientId,
+      message: "Votre rendez-vous est en cours de traitement."
+    });
+    await notification.save();
+    io.getIO().to(appointment.clientId.toString()).emit('notification', notification);
+
+    res.status(200).json({ message: "Rendez-vous confirmé", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -264,95 +299,20 @@ const completeAppointment = async (req, res) => {
 
     if (!appointment) return res.status(404).json({ message: "Rendez-vous non trouvé" });
 
-    if (appointment.status !== "in_progress") {
-      return res.status(400).json({ message: "Le rendez-vous n'est pas en cours." });
-    }
-
-    if (!startTime || !endTime) {
-      return res.status(400).json({ message: "Veuillez fournir une date de début et une date de fin." });
-    }
-
-    // ✅ Mise à jour du statut, de la date de fin et de la date de début
     appointment.status = "completed";
     appointment.startTime = new Date(startTime);
     appointment.endTime = new Date(endTime);
-
-    // ✅ Ajout des `partsUsed` fournies par le mécanicien
-    if (Array.isArray(partsUsed) && partsUsed.length > 0) {
-      for (const partItem of partsUsed) {
-        const part = await Part.findById(partItem.part);
-
-        if (!part) {
-          return res.status(404).json({ message: `Pièce introuvable pour l'ID ${partItem.part}` });
-        }
-
-        const quantity = partItem.quantity || 1;
-        const unitPrice = part.price;
-        const totalPrice = unitPrice * quantity;
-
-        appointment.partsUsed.push({
-          part: part._id,
-          quantity: quantity,
-          unitPrice: unitPrice,
-          totalPrice: totalPrice
-        });
-      }
-    }
-
     await appointment.save();
 
-    // ✅ Génération de la facture
-    const items = [];
-    let subtotal = 0;
-
-    // Ajouter les services à la facture
-    for (let s of appointment.services) {
-      const cost = s.estimatedCost || s.serviceType?.baseCost || 0;
-      items.push({
-        type: "service",
-        description: s.serviceType.name,
-        quantity: 1,
-        unitPrice: cost,
-        total: cost
-      });
-      subtotal += cost;
-    }
-
-    // Ajouter les pièces utilisées à la facture
-    for (let p of appointment.partsUsed || []) {
-      const total = p.unitPrice * p.quantity;
-      items.push({
-        type: "part",
-        description: p.part.name,
-        quantity: p.quantity,
-        unitPrice: p.unitPrice,
-        total: total
-      });
-      subtotal += total;
-    }
-
-    const taxRate = 0.2;
-    const totalAmount = subtotal * (1 + taxRate);
-
-    const invoice = new Invoice({
-      appointmentId: appointment._id,
-      clientId: appointment.clientId._id,
-      invoiceNumber: `INV-${appointment._id}`,
-      items,
-      subtotal,
-      taxRate,
-      totalAmount,
-      status: 'issued'
+    // 🔔 Notification au client
+    const notification = new Notification({
+      userId: appointment.clientId,
+      message: "Votre rendez-vous a été terminé."
     });
+    await notification.save();
+    io.getIO().to(appointment.clientId.toString()).emit('notification', notification);
 
-    await invoice.save();
-
-    res.status(200).json({
-      message: "Rendez-vous terminé et facture générée.",
-      appointment,
-      invoice
-    });
-
+    res.status(200).json({ message: "Rendez-vous terminé", appointment });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -435,5 +395,6 @@ module.exports = {
   assignMechanics,
   addPartsToAppointment,
   updateAppointment,
-  getAppointmentsForMechanic
+  getAppointmentsForMechanic,
+  setSocketFunctions
 };

@@ -12,11 +12,31 @@ const {
     getAppointmentById,
     assignMechanics,
     updateAppointment,
-    getAppointmentsForMechanic
+    getAppointmentsForMechanic,
+    setSocketFunctions
 } = require('../controllers/appointmentsController');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+let socketFunctions;
+
+// Middleware pour initialiser les fonctions socket
+router.use((req, res, next) => {
+  // Vérification pour s'assurer que socketFunctions est initialisé
+  if (!socketFunctions) {
+    // Récupération de l'instance io depuis l'application Express
+    const io = req.app.get('io');
+    if (io) {
+      const socketHandler = require('./../utils/socket');
+      socketFunctions = socketHandler(io);
+        setSocketFunctions(socketFunctions);
+    } else {
+      console.error('io n\'est pas disponible dans l\'application Express');
+    }
+  }
+  next();
+});
+
 router.use(auth());
 
 router.post('/', createAppointment); 

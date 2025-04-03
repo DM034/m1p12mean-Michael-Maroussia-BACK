@@ -7,6 +7,21 @@ const Invoice = require("../models/Invoice");
 const Notification = require("../models/Notification");
 const io = require('../utils/socket');
 
+// Variable pour stocker les fonctions socket
+let socketFunctions = {
+  emitNewNotification: () => {},
+  emitNotificationRead: () => {},
+  emitAllNotificationsRead: () => {},
+  emitNotificationDeleted: () => {},
+};
+
+// Méthode pour définir les fonctions socket
+const setSocketFunctions = (functions) => {
+  if (functions) {
+    socketFunctions = functions;
+  }
+};
+
 const getAppointmentsByUser = async (req, res) => {
   try {
       const userId = req.user.id; // L'utilisateur connecté
@@ -49,6 +64,7 @@ const createAppointment = async (req, res) => {
 
   try {
     const { vehicleId, services, startTime, notes } = req.body;
+    const io = req.app.get('io'); 
 
     const vehicle = await Vehicle.findById(vehicleId);
     if (!vehicle) {
@@ -88,15 +104,21 @@ const createAppointment = async (req, res) => {
 
     await appointment.save();
 
-    // 🔔 Notification pour l'admin après création du rendez-vous
+    const clientNotification = new Notification({
+      userId: req.user.id,
+      message: "Votre rendez-vous a été créé avec succès."
+    });
+    const savedClientNotification = await clientNotification.save();
+    socketFunctions.emitNewNotification(req.user.id, savedClientNotification);
+
     const admins = await User.find({ role: "admin" });
     admins.forEach(async (admin) => {
       const notification = new Notification({
         userId: admin._id,
         message: "Nouveau rendez-vous créé par un client."
       });
-      await notification.save();
-      io.getIO().to(admin._id.toString()).emit('notification', notification);
+      const savedNotification = await notification.save();
+      socketFunctions.emitNewNotification(admin.id.toString(), savedNotification);
     });
 
     res.status(201).json({ message: "Rendez-vous créé", appointment });
@@ -105,6 +127,7 @@ const createAppointment = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 const assignMechanicsToAppointment = async (req, res) => {
   if (req.user.role !== "admin") {
@@ -372,5 +395,6 @@ module.exports = {
   assignMechanics,
   addPartsToAppointment,
   updateAppointment,
-  getAppointmentsForMechanic
+  getAppointmentsForMechanic,
+  setSocketFunctions
 };

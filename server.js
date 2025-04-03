@@ -14,31 +14,39 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const partRoutes = require("./routes/partRoutes");
 const userRoutes = require('./routes/userRoutes');
-const socketIo = require('./utils/socket');
 const notificationRoutes = require('./routes/notificationRoutes');
 const http = require('http');
+const { Server } = require('socket.io');
+const socketHandler = require('./utils/socket');
 
 dotenv.config();
 connectDB();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo.init(server);
 
-// Middleware
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Remplacer par ton domaine en production
+    methods: ["GET", "POST"]
+  }
+});
+
+// Attacher l'instance de Socket.IO à l'application
+app.set('io', io);
+
 app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
 app.use(cors({
   origin: [
     'https://m1p12mean-michael-maroussia-garage.vercel.app', 
-    'http://localhost:4200'            
+    'http://localhost:4200'
   ],
   credentials: true
 }));
-
 app.use(morgan('dev'));
-// app.use(bodyParser.json());
+
+// Initialise Socket.IO
+socketHandler(io);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -54,4 +62,4 @@ app.use("/api/users", userRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

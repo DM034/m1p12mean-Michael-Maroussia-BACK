@@ -106,7 +106,8 @@ const createAppointment = async (req, res) => {
 
     const clientNotification = new Notification({
       userId: req.user.id,
-      message: "Votre rendez-vous a été créé avec succès."
+      message: "Votre rendez-vous a été créé avec succès.",
+      link:"/client/appointment"
     });
     const savedClientNotification = await clientNotification.save();
     socketFunctions.emitNewNotification(req.user.id, savedClientNotification);
@@ -115,7 +116,9 @@ const createAppointment = async (req, res) => {
     admins.forEach(async (admin) => {
       const notification = new Notification({
         userId: admin._id,
-        message: "Nouveau rendez-vous créé par un client."
+        message: "Nouveau rendez-vous créé par un client.",
+        link:"/admin/planning-management"
+
       });
       const savedNotification = await notification.save();
       socketFunctions.emitNewNotification(admin.id.toString(), savedNotification);
@@ -247,7 +250,7 @@ const addPartsToAppointment = async (req, res) => {
   }
 
   try {
-    const { appointmentId } = req.params;
+    const { appointmentId } = req.params;   
     const { parts } = req.body; // [{ partId, quantity }]
 
     const appointment = await Appointment.findById(appointmentId);
